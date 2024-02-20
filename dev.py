@@ -18,11 +18,12 @@ prompt_length = 20
 start_position = 0
     
 positional_embedding_alteration_params = {
+    "zero": dict(indices=(4, 9)),  # Contexts start at position 4 and finish at position 9
     "median": dict(indices=(4, 9)),  # Contexts start at position 4 and finish at position 9
     "reset": dict(indices=[4, 6, 9]),  # Context 1 starts at 4 and finishes at 5, context 2 starts at 6 and finishes at 8
 }
 
-mode = "reset"
+mode = "zero"
 
 
 if __name__=="__main__":

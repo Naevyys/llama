@@ -22,7 +22,7 @@ class AlteredTransformer(Transformer):
 
         @returns None
         '''
-        assert mode is None or mode in {"median", "reset"}, "Invalid mode provided"
+        assert mode is None or mode in {"zero", "median", "reset"}, "Invalid mode provided"
         # Note: I don't think it makes any sense to implement zero-patching to replace rotary positional embedding. But I can always add it later if we want to try it as well.
 
         error_msg = "Provide {} argument for mode {}."
@@ -34,7 +34,7 @@ class AlteredTransformer(Transformer):
 
             if mode == "reset":
                 assert isinstance(indices, list) and (len(indices) > 1), "Indices must be a list of at least two elements."
-            if mode == "median":
+            if mode in {"zero", "median"}:
                 assert isinstance(indices, tuple) and (len(indices) == 2), "Indices must be a tuple of two elements."
             
             previous = 0
@@ -55,6 +55,11 @@ class AlteredTransformer(Transformer):
         @returns torch.Tensor of the same shape as freqs_cis, which are the new positional embeddings to use.
         '''
         new_freqs_cis = freqs_cis.detach().clone()
+        if self.alteration_mode == "zero":
+            start, stop = self.alteration_kwargs["indices"]
+            median = start + (stop - start) // 2
+            new_freqs_cis[start:stop, :] = 0+0j
+            print(new_freqs_cis[start:stop, :3])
         if self.alteration_mode == "median":
             start, stop = self.alteration_kwargs["indices"]
             median = start + (stop - start) // 2
