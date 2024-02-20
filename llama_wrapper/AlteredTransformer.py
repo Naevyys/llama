@@ -13,7 +13,7 @@ class AlteredTransformer(Transformer):
         self.alteration_mode = None
         self.alteration_kwargs = dict()
 
-    def switch_mode(self, mode:list=None, **kwargs):
+    def switch_mode(self, mode:str=None, **kwargs):
         '''
         Switch the model's alteration mode.
         
@@ -54,12 +54,20 @@ class AlteredTransformer(Transformer):
 
         @returns torch.Tensor of the same shape as freqs_cis, which are the new positional embeddings to use.
         '''
-        if self.alteration_mode is None:
-            return freqs_cis
+        new_freqs_cis = freqs_cis.detach().clone()
         if self.alteration_mode == "median":
-            raise NotImplementedError  # TODO
+            start, stop = self.alteration_kwargs["indices"]
+            median = start + (stop - start) // 2
+            new_freqs_cis[start:stop, :] = freqs_cis[median, :]
+            print(new_freqs_cis[start:stop, :3])
         if self.alteration_mode == "reset":
-            raise NotImplementedError  # TODO
+            indices = self.alteration_kwargs["indices"]
+            for i in range(len(indices) - 1):
+                new_freqs_cis[indices[i]:indices[i+1], :] = freqs_cis[indices[0]:indices[0] + indices[i+1] - indices[i], :]
+            print(new_freqs_cis[indices[0]:indices[-1], :3])
+        
+        # Otherwise return the same vector as freqs_cis
+        return new_freqs_cis
 
     @torch.inference_mode()
     def forward(self, tokens: torch.Tensor, start_pos: int):  # Let's overwrite the standard Transformer forward
@@ -79,7 +87,9 @@ class AlteredTransformer(Transformer):
         self.freqs_cis = self.freqs_cis.to(h.device)
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
 
+        print(freqs_cis.shape)
         freqs_cis = self.alter_positional_embedding(freqs_cis)  # Modification compared to the forward of the superclass
+        print(freqs_cis.shape)
 
         mask = None
         if seqlen > 1:
