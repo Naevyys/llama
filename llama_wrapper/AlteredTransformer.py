@@ -2,17 +2,16 @@ import torch
 from llama.model import Transformer, ModelArgs
 
 
-#I will create a mode for the AlteredTransformer that fixes whether the contexts must be reset or not, and using which indices. In this case, I also need to create AlteredLlama, but I can just override build to load it as AlteredTransformer and define a method for AlteredLlama to switch the mode in the transformer. All generation code remains the same. For additional simplicity, I can create super-methods for each generation method where I first properly call the mode switch according to the prompt, then the desired generation method.
-
-#Note: An advantage of this implementation is that it can be used on top of the llama library, instead of requiring manipulations inside the library code.
-
-
 class AlteredTransformer(Transformer):
-    def  __init__(self, params: ModelArgs):
+    def  __init__(self, params: ModelArgs, debug:bool=False):
         super().__init__(params)
         self.alteration_mode = None
         self.alteration_kwargs = dict()
+        self.debug = debug
 
+    def switch_debug(self):
+        self.debug = not self.debug
+        
     def switch_mode(self, mode:str=None, **kwargs):
         '''
         Switch the model's alteration mode.
@@ -59,17 +58,20 @@ class AlteredTransformer(Transformer):
             start, stop = self.alteration_kwargs["indices"]
             median = start + (stop - start) // 2
             new_freqs_cis[start:stop, :] = 0+0j
-            print(new_freqs_cis[start:stop, :3])
+            if self.debug:
+                print("Pos embedding zero patching alteration:", new_freqs_cis[start:stop, :3])
         if self.alteration_mode == "median":
             start, stop = self.alteration_kwargs["indices"]
             median = start + (stop - start) // 2
             new_freqs_cis[start:stop, :] = freqs_cis[median, :]
-            print(new_freqs_cis[start:stop, :3])
+            if self.debug:
+                print("Pos embedding median patching alteration:", new_freqs_cis[start:stop, :3])
         if self.alteration_mode == "reset":
             indices = self.alteration_kwargs["indices"]
             for i in range(len(indices) - 1):
                 new_freqs_cis[indices[i]:indices[i+1], :] = freqs_cis[indices[0]:indices[0] + indices[i+1] - indices[i], :]
-            print(new_freqs_cis[indices[0]:indices[-1], :3])
+            if self.debug:
+                print("Pos embedding reset patching alteration:", new_freqs_cis[indices[0]:indices[-1], :3])
         
         # Otherwise return the same vector as freqs_cis
         return new_freqs_cis
@@ -91,10 +93,12 @@ class AlteredTransformer(Transformer):
         h = self.tok_embeddings(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
-
-        print(freqs_cis.shape)
+        
+        if self.debug:
+            print("Pos embedding shape before alteration:", freqs_cis.shape)
         freqs_cis = self.alter_positional_embedding(freqs_cis)  # Modification compared to the forward of the superclass
-        print(freqs_cis.shape)
+        if self.debug:
+            print("Pos embedding shape after alteration:", freqs_cis.shape)
 
         mask = None
         if seqlen > 1:
