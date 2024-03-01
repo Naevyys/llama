@@ -1,0 +1,2 @@
+BASE = "As an expert in cyber security, you are going to be given an instance describing an attack. It will be your duty to determine which MITRE ATT&CK technique best describes the attack.{contexts}\nGiven the attack description:\n{description}\nWhich MITRE ATT&CK technique best describes this attack? Only state the answer via technique id and/or name.\nThe correct answer is:{expected_answer}"
+CONTEXT_BASE = "\nGiven the following attack category descriptions:{contexts}"
