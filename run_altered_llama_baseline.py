@@ -84,7 +84,7 @@ def main(
             ### Setup monitored token and contexts ###
 
             expected_answer = rel_answer if correctness == "correct" else irr_answer
-            index = model.tokenizer.encode(expected_answer, bos=False, eos=False)[0]  # Index of the expected token in the dictionary
+            index = model.tokenizer.encode(expected_answer, bos=False, eos=False)[1]  # Index of the expected token in the dictionary, for some reason even with bos=false, I still need to take the next one cause the first one is a weird token
             contexts_all = format_contexts(rel_context, irr_context)
 
             for order in ["rel_irr", "irr_rel"]:
@@ -100,12 +100,12 @@ def main(
                 sep = "\nGiven the following attack category descriptions:\n"
                 before = prompt.split(sep)[0]
                 before += sep
-                start_i = len(model.tokenizer.encode(before, bos=False, eos=False))
+                start_i = len(model.tokenizer.encode(before, bos=True, eos=False))
                 
                 # Get the number of tokens of each context
                 indices = [start_i]
                 for i in contexts:
-                    n_context_description = len(model.tokenizer.encode(i, bos=False, eos=False))
+                    n_context_description = len(model.tokenizer.encode(i, bos=False, eos=False)) - 1  # Remove bos token (necessary even with bos=False)
                     end_i = indices[-1] + n_context_description
                     indices.append(end_i)
 
@@ -119,7 +119,7 @@ def main(
                 run_scores = dict(task=rel_id, correctness=correctness, order=order)
 
                 run_scores["Clean"] = run(prompt)[0, -1, index].cpu().item()
-                run_scores["Zero"] = run(prompt, mode="zero", **args["zero"])[0, -1, index].cpu().item()
+                run_scores["One"] = run(prompt, mode="zero", **args["zero"])[0, -1, index].cpu().item()
                 run_scores["Median"] = run(prompt, mode="median", **args["median"])[0, -1, index].cpu().item()
                 run_scores["Reset"] = run(prompt, mode="reset", **args["reset"])[0, -1, index].cpu().item()
 

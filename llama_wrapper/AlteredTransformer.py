@@ -56,7 +56,7 @@ class AlteredTransformer(Transformer):
         new_freqs_cis = freqs_cis.detach().clone()
         if self.alteration_mode == "zero":
             start, stop = self.alteration_kwargs["indices"]
-            new_freqs_cis[start:stop, :] = 0+0j
+            new_freqs_cis[start:stop, :] = 1+0j
             if self.debug:
                 print("Pos embedding zero patching alteration:", new_freqs_cis[start:stop, :3])
         if self.alteration_mode == "median":
@@ -94,6 +94,7 @@ class AlteredTransformer(Transformer):
         freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
         
         if self.debug:
+            print(f"Shape of input tokens: {tokens.shape}")
             print("Pos embedding shape before alteration:", freqs_cis.shape)
         freqs_cis = self.alter_positional_embedding(freqs_cis)  # Modification compared to the forward of the superclass
         if self.debug:
