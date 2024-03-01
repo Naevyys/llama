@@ -56,7 +56,6 @@ class AlteredTransformer(Transformer):
         new_freqs_cis = freqs_cis.detach().clone()
         if self.alteration_mode == "zero":
             start, stop = self.alteration_kwargs["indices"]
-            median = start + (stop - start) // 2
             new_freqs_cis[start:stop, :] = 0+0j
             if self.debug:
                 print("Pos embedding zero patching alteration:", new_freqs_cis[start:stop, :3])

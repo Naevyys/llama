@@ -41,7 +41,5 @@ if __name__=="__main__":
 
     model = AlteredTransformer(params)
     model.switch_mode(mode, **positional_embedding_alteration_params.get(mode, dict()))
-    
     tokens = torch.randint(0, vocab_size, (batch_size, prompt_length))
-    
     print(model.forward(tokens, start_position).shape)

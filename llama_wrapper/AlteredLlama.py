@@ -1,5 +1,18 @@
+import torch, os, sys, time, json
+
 from llama.generation import Llama
-from AlteredTransformer import AlteredTransformer
+from llama.model import ModelArgs
+from llama.tokenizer import Tokenizer
+
+from llama_wrapper.AlteredTransformer import AlteredTransformer
+
+from typing import Optional, List
+from fairscale.nn.model_parallel.initialize import (
+    get_model_parallel_rank,
+    initialize_model_parallel,
+    model_parallel_is_initialized,
+)
+from pathlib import Path
 
 
 class AlteredLlama(Llama):
@@ -76,7 +89,7 @@ class AlteredLlama(Llama):
 
         return AlteredLlama(model, tokenizer)  # And this
     
-    def __init__(self, model: Transformer, tokenizer: Tokenizer):
+    def __init__(self, model: AlteredTransformer, tokenizer: Tokenizer):
         super().__init__(model, tokenizer)
     
     def switch_mode(self, mode:str=None, **kwargs):
@@ -84,3 +97,9 @@ class AlteredLlama(Llama):
     
     def switch_debug(self):
         self.model.switch_debug()
+    
+    def __call__(self, prompt:str, start_pos:int=0):
+        prompt_tokens = [self.tokenizer.encode(prompt, bos=True, eos=False)]
+        prompt_tokens = torch.tensor(prompt_tokens, dtype=torch.long, device="cuda")
+        logits = self.model.forward(prompt_tokens, start_pos)
+        return logits
